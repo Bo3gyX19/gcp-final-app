@@ -77,9 +77,9 @@ terraform apply -var="project_id=YOUR_PROJECT_ID" -var="project_number=YOUR_PROJ
 Для автоматичної перевірки всієї системи використовується скрипт verify.sh. Він генерує тестовий PDF із "секретною" інформацією, завантажує його та перевіряє, чи зможе Агент знайти цей секрет.
 
  Вимоги:
-
-    - Cloud Shell (рекомендовано) або локальний термінал.
-    - Встановлена бібліотека **fpdf** (для генерації PDF): **pip install fpdf**.
+ 
+  * Cloud Shell (рекомендовано) або локальний термінал.
+  * Встановлена бібліотека **fpdf** (для генерації PDF): **pip install fpdf**.
  
  Запуск перевірки:
 
@@ -89,7 +89,7 @@ terraform apply -var="project_id=YOUR_PROJECT_ID" -var="project_number=YOUR_PROJ
 ```bash
      chmod +x verify.sh
 ```
-    3.Запустіть:
+ 3. Запустіть:
 
 ```bash
      ./verify.sh
