@@ -74,7 +74,7 @@ terraform apply -var="project_id=YOUR_PROJECT_ID" -var="project_number=YOUR_PROJ
     --service-account=YOUR_PROJECT_NUMBER-compute@developer.gserviceaccount.com
 ```
 ### 4. Тестування (End-to-End Verification)
-Для автоматичної перевірки всієї системи використовується скрипт verify.sh. Він генерує тестовий PDF із "секретною" інформацією, завантажує його та перевіряє, чи зможе Агент знайти цей секрет.
+Для автоматичної перевірки всієї системи використовується скрипт **verify.sh**. Він генерує тестовий PDF із "секретною" інформацією, завантажує його та перевіряє, чи зможе Агент знайти цей секрет.
 
  Вимоги:
  
@@ -83,7 +83,7 @@ terraform apply -var="project_id=YOUR_PROJECT_ID" -var="project_number=YOUR_PROJ
  
  Запуск перевірки:
 
- 1. Створіть файл verify.sh і вставте в нього код із розділу "Скрипт перевірки" (див. нижче).
+ 1. Створіть файл verify.sh і вставте в нього код.
  2. Зробіть його виконуваним:
 
 ```bash
