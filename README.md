@@ -82,69 +82,75 @@ cp terraform.tfvars.example terraform.tfvars
 # Відредагуйте terraform.tfvars — вкажіть ваш project_id та project_number
 ```
 
-### 1. (Опціонально) Створення Remote Backend для Terraform State
+### 1. Build & Push Docker Images (Cloud Build) — ВАЖЛИВО!
+
+⚠️ **ОБОВ'ЯЗКОВИЙ КРОК:** Цей крок ПОВИНЕН виконатись ДО `terraform apply`, тому що Cloud Run сервіси потребують Docker-образи в Artifact Registry.
 
 ```bash
-PROJECT_ID=$(gcloud config get-value project)
-gsutil mb -p $PROJECT_ID -l US gs://${PROJECT_ID}-tfstate
-gsutil versioning set on gs://${PROJECT_ID}-tfstate
+cd ..  # Повернутися до кореня проєкту (якщо ви у terraform/)
+gcloud builds submit --config=cloudbuild.yaml
 ```
-Після цього розкоментуйте блок `backend "gcs"` у `terraform/provider.tf` і вкажіть ваш бакет.
 
-### 2. Інфраструктура (Terraform)
+Монітор збірки:
+```bash
+gcloud builds log --stream LAST
+```
+
+Очікуваний результат: "BUILD SUCCESS" та образи у Artifact Registry.
+
+Цей крок автоматично:
+- ✅ Будує Docker-образи для обох сервісів
+- ✅ Пушить їх до Artifact Registry
+- ✅ Розгортає обидва сервіси на Cloud Run
+
+### 2. Infrastructure (Terraform) — Local State
+
+Тепер, коли образи готові, розгортайте інфраструктуру:
 
 ```bash
 cd terraform
-terraform init
-terraform plan    # Перевірте зміни
-terraform apply   # Підтвердіть створення ресурсів
+terraform init          # Ініціалізація з локальним state
+terraform plan         # Перевірте план зміни
+terraform apply        # Підтвердіть створення ресурсів
 ```
 
-Terraform автоматично створить:
-- GCS bucket для документів
+Terraform створить:
+- **GCS bucket для Terraform state** (`{project_id}-tfstate`)
+- GCS bucket для документів PDF
 - BigQuery dataset, таблицю та ML-модель для ембеддінгів
 - VPC з Private Google Access
 - Artifact Registry для Docker-образів
-- Cloud Run сервіси (Ingestor + Agent API)
 - Eventarc тригер (GCS → Ingestor)
 - Dedicated Service Accounts (Least Privilege)
 - Cloud Monitoring Dashboard
 
-### 3. Перша збірка та деплой (Cloud Build)
+### 3. Міграція State на Remote Backend (GCS)
+
+Після успішного `terraform apply`, мігруйте state з локального файлу на GCS bucket:
 
 ```bash
-cd ..  # Повернутися до кореня проєкту
-gcloud builds submit --config=cloudbuild.yaml
+# 1. Розкоментуйте backend блок у terraform/provider.tf
+# Змініть з:
+#   # backend "gcs" {
+#   #   bucket = "<PROJECT_ID>-tfstate"
+#   #   prefix = "terraform/state"
+#   # }
+# На (замініть <PROJECT_ID>):
+#   backend "gcs" {
+#     bucket = "training-user-o-rengach-tfstate"
+#     prefix = "terraform/state"
+#   }
+
+# 2. Мігруйте state
+terraform init
+# Коли буде запит "Do you want to copy existing state to the new backend?" → Відповідьте: YES
+
+# 3. Видаліть локальні state файли
+rm terraform.tfstate*
 ```
 
-Або вручну зібрати та задеплоїти кожен сервіс:
+Тепер ваш state безпечно зберігається у GCS з versioning-ом.
 
-```bash
-PROJECT_ID=$(gcloud config get-value project)
-REGION=us-central1
-
-# Ingestor
-gcloud builds submit ./ingestion \
-  --tag ${REGION}-docker.pkg.dev/${PROJECT_ID}/rag-repo/rag-ingestor:latest
-
-gcloud run deploy rag-ingestor \
-  --image ${REGION}-docker.pkg.dev/${PROJECT_ID}/rag-repo/rag-ingestor:latest \
-  --region $REGION \
-  --service-account rag-ingestor-sa@${PROJECT_ID}.iam.gserviceaccount.com \
-  --set-env-vars PROJECT_ID=$PROJECT_ID \
-  --no-allow-unauthenticated
-
-# Agent API
-gcloud builds submit ./app \
-  --tag ${REGION}-docker.pkg.dev/${PROJECT_ID}/rag-repo/rag-agent:latest
-
-gcloud run deploy rag-agent \
-  --image ${REGION}-docker.pkg.dev/${PROJECT_ID}/rag-repo/rag-agent:latest \
-  --region $REGION \
-  --service-account rag-api-agent-sa@${PROJECT_ID}.iam.gserviceaccount.com \
-  --set-env-vars PROJECT_ID=$PROJECT_ID \
-  --allow-unauthenticated
-```
 ### 4. Тестування (End-to-End Verification)
 
 Для автоматичної перевірки всієї системи використовується скрипт **verify.sh**. Він генерує тестовий PDF із "секретною" інформацією, завантажує його та перевіряє, чи зможе Агент знайти цей секрет.
