@@ -1,0 +1,15 @@
+# ──────────────────────────────────────────────
+# Copy this file to terraform.tfvars and fill in your values
+# ──────────────────────────────────────────────
+# cp terraform.tfvars.example terraform.tfvars
+
+project_id        = "YOUR_PROJECT_ID"
+project_number    = "YOUR_PROJECT_NUMBER"
+region            = "us-central1"
+location          = "US"
+environment       = "dev"
+eventarc_location = "us"
+
+# Optional overrides (leave empty to auto-generate from project_id)
+# docs_bucket_name    = ""
+# tfstate_bucket_name = ""
