@@ -1,0 +1,55 @@
+# ──────────────────────────────────────────────
+# Cloud Build — CI/CD Pipeline
+# ──────────────────────────────────────────────
+# Triggered on push to main branch.
+# Builds both Docker images and deploys them to Cloud Run.
+
+substitutions:
+  _REGION: us-central1
+  _REPO: rag-repo
+  _INGESTOR_SERVICE: rag-ingestor
+  _AGENT_SERVICE: rag-agent
+
+steps:
+  # ────────── Build Ingestor Image ──────────
+  - id: "build-ingestor"
+    name: "gcr.io/cloud-builders/docker"
+    args:
+      - "build"
+      - "-t"
+      - "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/${_INGESTOR_SERVICE}:latest"
+      - "./ingestion"
+
+  # ────────── Build Agent Image ──────────
+  - id: "build-agent"
+    name: "gcr.io/cloud-builders/docker"
+    args:
+      - "build"
+      - "-t"
+      - "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/${_AGENT_SERVICE}:latest"
+      - "./app"
+
+  # ────────── Push Ingestor Image ──────────
+  - id: "push-ingestor"
+    name: "gcr.io/cloud-builders/docker"
+    args:
+      - "push"
+      - "--all-tags"
+      - "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/${_INGESTOR_SERVICE}"
+    waitFor: ["build-ingestor"]
+
+  # ────────── Push Agent Image ──────────
+  - id: "push-agent"
+    name: "gcr.io/cloud-builders/docker"
+    args:
+      - "push"
+      - "--all-tags"
+      - "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/${_AGENT_SERVICE}"
+    waitFor: ["build-agent"]
+
+images:
+  - "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/${_INGESTOR_SERVICE}:latest"
+  - "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/${_AGENT_SERVICE}:latest"
+
+options:
+  logging: CLOUD_LOGGING_ONLY
