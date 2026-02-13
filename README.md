@@ -205,6 +205,11 @@ Terraform автоматично створює Cloud Monitoring Dashboard з н
 cd terraform
 terraform destroy
 
+# 1.1 Якщо виникне помилка "dataset in use", мануально видаліть датасет з BigQuery:
+bq rm -r -d -f enterprise_rag_v2
+# 1.2 та повторіть дестрой інфри 
+terraform destroy
+
 # 2. Видалити образи з Artifact Registry (якщо terraform destroy не зачепив)
 gcloud artifacts docker images list \
   ${REGION}-docker.pkg.dev/${PROJECT_ID}/rag-repo \
